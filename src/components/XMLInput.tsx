@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { HardDriveUpload } from "lucide-react";
+import { Github } from 'lucide-react';
 
 // CodeMirror imports
 import { EditorView, basicSetup } from "codemirror";
@@ -85,13 +86,25 @@ const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col flex-grow bg-white rounded-lg shadow-lg p-6"
+      className="flex flex-col h-full bg-white rounded-lg shadow-lg p-6"
     >
-      <h2 className="text-2xl font-bold text-primary mb-4">XML Data</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-primary">XML Data</h2>
+        <a 
+          href="https://github.com/your-username/d3-xml-visualizer"
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center space-x-2 text-slate-600 hover:text-accent transition-colors"
+        >
+          <Github size={20} />
+          <span>View on GitHub</span>
+        </a>
+      </div>
+      
       <div
         ref={editorRef}
-        className="flex-grow w-full border border-slate-300 rounded-md overflow-hidden bg-slate-50"
-        style={{ minHeight: "300px" }}
+        className="flex-grow w-full border border-slate-300 rounded-md overflow-auto bg-slate-50"
+        style={{ minHeight: "200px" }}
       />
       <button
         type="submit"
