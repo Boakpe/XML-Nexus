@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Github } from 'lucide-react';
 import XMLInput from './components/XMLInput';
 import Tabs from './components/Tabs';
@@ -7,6 +7,8 @@ import GraphView from './components/GraphView';
 import TreeView from './components/TreeView';
 import { parseXML } from './utils/xmlParser';
 import type { ParsedData } from './utils/types';
+
+
 
 // A good default example for the user to start with
 const defaultXML = `
@@ -45,6 +47,19 @@ function App() {
     }
   };
 
+    // Calculate stats from the parsed data
+  const stats = useMemo(() => {
+    if (!data) return null;
+
+    const { nodes, links } = data.graphData;
+    const totalNodes = nodes.length;
+    const totalEdges = links.length;
+    const leafNodes = nodes.filter(node => node.type === 'leaf').length;
+    const maxDepth = Math.max(0, ...nodes.map(node => node.level));
+
+    return { totalNodes, totalEdges, maxDepth, leafNodes };
+  }, [data]);
+
   return (
     <div className="flex flex-col h-screen bg-secondary font-sans">
       <header className="bg-primary text-white shadow-md p-4 flex justify-between items-center">
@@ -61,9 +76,33 @@ function App() {
       </header>
       
       <main className="flex-grow flex p-4 gap-4 overflow-hidden">
-        <div className="w-1/3 flex flex-col">
-          <XMLInput onVisualize={handleVisualize} initialValue={defaultXML} />
-        </div>
+        <div className="w-1/3 flex flex-col gap-4">
+           <XMLInput onVisualize={handleVisualize} initialValue={defaultXML} />
+          
+          {stats && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-primary mb-4">Statistics</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-slate-100 p-3 rounded-md">
+                  <p className="text-slate-500 font-semibold">Total Nodes</p>
+                  <p className="text-2xl font-bold text-primary">{stats.totalNodes}</p>
+                </div>
+                <div className="bg-slate-100 p-3 rounded-md">
+                  <p className="text-slate-500 font-semibold">Total Edges</p>
+                  <p className="text-2xl font-bold text-primary">{stats.totalEdges}</p>
+                </div>
+                <div className="bg-slate-100 p-3 rounded-md">
+                  <p className="text-slate-500 font-semibold">Max Depth</p>
+                  <p className="text-2xl font-bold text-primary">{stats.maxDepth}</p>
+                </div>
+                <div className="bg-slate-100 p-3 rounded-md">
+                  <p className="text-slate-500 font-semibold">Leaf Nodes</p>
+                  <p className="text-2xl font-bold text-primary">{stats.leafNodes}</p>
+                </div>
+              </div>
+            </div>
+          )}
+         </div>
         
         <div className="w-2/3 flex flex-col bg-white rounded-lg shadow-lg p-4">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />

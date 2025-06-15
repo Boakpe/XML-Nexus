@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from 'react';
 import { HardDriveUpload } from "lucide-react";
 
 // CodeMirror imports
@@ -85,7 +85,7 @@ const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col h-full bg-white rounded-lg shadow-lg p-6"
+      className="flex flex-col flex-grow bg-white rounded-lg shadow-lg p-6"
     >
       <h2 className="text-2xl font-bold text-primary mb-4">XML Data</h2>
       <div
