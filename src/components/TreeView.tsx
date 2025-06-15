@@ -24,16 +24,17 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
     const root = d3.hierarchy(data);
     rootRef.current = root;
 
-    root.x0 = height / 2;
-    root.y0 = 0;
+    root.x0 = 0; // Center vertically
+    root.y0 = 0; // Start from left
 
-    // Assign unique IDs and collapse nodes after the first level for initial view
+    // Assign unique IDs and collapse ALL nodes except root
     let i = 0;
     root.descendants().forEach(d => {
       d.id = ++i;
       // @ts-ignore - attaching _children for collapse/expand
       d._children = d.children;
-      if (d.depth > 1) {
+      // Collapse all nodes except the root (depth 0)
+      if (d.depth > 0) {
         d.children = null;
       }
     });
@@ -41,7 +42,8 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
     const svg = d3.select(svgRef.current)
       .attr('width', width)
       .attr('height', height)
-      .attr('viewBox', [-dy / 3, -height / 2, width, height].join(' '))
+      // Center vertically: set y to -(height/2 - dx) so root is near the top
+      .attr('viewBox', [-dy / 3, -(height / 2) + dx, width, height].join(' '))
       .style('font', '12px sans-serif');
 
     // Clear previous render
@@ -92,8 +94,11 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
         .attr('fill-opacity', 0)
         .attr('stroke-opacity', 0)
         .on('click', (event, d) => {
-          d.children = d.children ? null : (d as any)._children;
-          update(d);
+          // Only allow clicking if the node has children to expand/collapse
+          if ((d as any)._children || d.children) {
+            d.children = d.children ? null : (d as any)._children;
+            update(d);
+          }
         })
         .on('mouseover', (event, d) => {
           tooltip.transition().duration(200).style('opacity', .9);
@@ -112,15 +117,68 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
           tooltip.transition().duration(500).style('opacity', 0);
         });
 
+      // Create different visual indicators for different node states
       nodeEnter.append('circle')
-        .attr('r', 6)
-        .attr('stroke-width', 10)
-        .attr('fill', d => (d as any)._children ? '#0f172a' : '#38bdf8') // Dark for expandable, blue for leaf
-        .attr('stroke', d => (d as any)._children ? '#0f172a' : '#38bdf8');
+        .attr('r', d => {
+          // Larger circle for nodes with children
+          return (d as any)._children || d.children ? 8 : 6;
+        })
+        .attr('stroke-width', 2)
+        .attr('fill', d => {
+          if ((d as any)._children) {
+            // Collapsed node (has hidden children) - solid dark
+            return '#1e293b';
+          } else if (d.children) {
+            // Expanded node (showing children) - hollow blue
+            return '#ffffff';
+          } else {
+            // Leaf node (no children) - solid blue
+            return '#38bdf8';
+          }
+        })
+        .attr('stroke', d => {
+          if ((d as any)._children) {
+            // Collapsed node - dark border
+            return '#1e293b';
+          } else if (d.children) {
+            // Expanded node - blue border
+            return '#38bdf8';
+          } else {
+            // Leaf node - blue border
+            return '#38bdf8';
+          }
+        });
+
+      // Add expand/collapse indicator for nodes with children
+      nodeEnter.append('text')
+        .attr('class', 'expand-indicator')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('font-size', '10px')
+        .attr('font-weight', 'bold')
+        .attr('fill', d => {
+          if ((d as any)._children) {
+            return '#ffffff'; // White plus on dark background
+          } else if (d.children) {
+            return '#38bdf8'; // Blue minus on white background
+          } else {
+            return 'transparent'; // No indicator for leaf nodes
+          }
+        })
+        .text(d => {
+          if ((d as any)._children) {
+            return '+'; // Collapsed - show plus
+          } else if (d.children) {
+            return '−'; // Expanded - show minus
+          } else {
+            return ''; // Leaf node - no indicator
+          }
+        });
 
       nodeEnter.append('text')
+        .attr('class', 'node-label')
         .attr('dy', '0.31em')
-        .attr('x', d => d.children || (d as any)._children ? -12 : 12)
+        .attr('x', d => d.children || (d as any)._children ? -15 : 15)
         .attr('text-anchor', d => d.children || (d as any)._children ? 'end' : 'start')
         .text(d => d.data.name)
         .clone(true).lower()
@@ -134,10 +192,50 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
         .attr('fill-opacity', 1)
         .attr('stroke-opacity', 1);
       
+      // Update circle appearance
       nodeUpdate.select('circle')
-        .attr('fill', d => (d as any)._children ? '#0f172a' : '#38bdf8')
-        .attr('stroke', d => (d as any)._children ? '#0f172a' : '#38bdf8');
+        .attr('r', d => {
+          return (d as any)._children || d.children ? 8 : 6;
+        })
+        .attr('fill', d => {
+          if ((d as any)._children) {
+            return '#1e293b';
+          } else if (d.children) {
+            return '#ffffff';
+          } else {
+            return '#38bdf8';
+          }
+        })
+        .attr('stroke', d => {
+          if ((d as any)._children) {
+            return '#1e293b';
+          } else if (d.children) {
+            return '#38bdf8';
+          } else {
+            return '#38bdf8';
+          }
+        });
 
+      // Update expand/collapse indicator
+      nodeUpdate.select('.expand-indicator')
+        .attr('fill', d => {
+          if ((d as any)._children) {
+            return '#ffffff';
+          } else if (d.children) {
+            return '#38bdf8';
+          } else {
+            return 'transparent';
+          }
+        })
+        .text(d => {
+          if ((d as any)._children) {
+            return '+';
+          } else if (d.children) {
+            return '−';
+          } else {
+            return '';
+          }
+        });
 
       // Transition exiting nodes to the parent's new position.
       const nodeExit = node.exit().transition(transition).remove()
@@ -186,8 +284,11 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
         gLink.attr('transform', event.transform);
       });
     
-    // @ts-ignore - d3 types for zoom are a bit tricky
-    svg.call(zoom).call(zoom.translateTo, root.y0, root.x0);
+    // Center the tree on initial render (move root to top center)
+    svg.call(zoom).call(
+      zoom.transform,
+      d3.zoomIdentity.translate(dy / 3, dx) // dx instead of height/2
+    );
 
     return () => {
       // Cleanup tooltip on component unmount
