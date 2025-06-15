@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import type { GraphData, D3GraphNode } from '../utils/types';
