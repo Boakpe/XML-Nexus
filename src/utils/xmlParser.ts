@@ -28,22 +28,45 @@ export const parseXML = (xmlString: string): ParsedData | null => {
     const nodes: D3GraphNode[] = [];
     const links: D3GraphLink[] = [];
 
-    const traverse = (element: Element, parentId?: string): D3TreeNode => {
+    const traverse = (element: Element, parentId: string | null, level: number): D3TreeNode => {
       const currentId = `node-${nodeIdCounter++}`;
       
       const nodeAttributes = getAttributes(element);
+      const childElements = Array.from(element.children);
 
-      // For hierarchical tree data
-      const treeNode: D3TreeNode = {
-        name: element.tagName,
-        attributes: nodeAttributes,
-        children: [],
-      };
+      // Determine node type based on element characteristics
+      let nodeType: D3GraphNode['type'] = 'element';
+      if (level === 0) nodeType = 'root';
+      else if (childElements.length === 0) nodeType = 'leaf';
+      else if (childElements.length > 3) nodeType = 'container';
 
+      // Create node label
+      let label = element.tagName;
+      const attributeStrings = Object.entries(nodeAttributes).map(([k, v]) => `${k}="${v}"`);
+      if (attributeStrings.length > 0) {
+        label += `\n[${attributeStrings.join(', ')}]`;
+      }
+      
+      const textContent = Array.from(element.childNodes)
+        .filter(child => child.nodeType === Node.TEXT_NODE)
+        .map(child => child.textContent?.trim())
+        .filter(text => text && text.length > 0)
+        .join(' ');
+        
+      if (textContent && childElements.length === 0) {
+        const truncatedText = textContent.length > 50 
+          ? textContent.substring(0, 47) + '...' 
+          : textContent;
+        label += `\n"${truncatedText}"`;
+      }
+      
       // For flat graph data
       const graphNode: D3GraphNode = {
         id: currentId,
-        name: element.tagName,
+        label: label,
+        tagName: element.tagName,
+        type: nodeType,
+        level: level,
         attributes: nodeAttributes,
       };
       nodes.push(graphNode);
@@ -52,21 +75,22 @@ export const parseXML = (xmlString: string): ParsedData | null => {
         links.push({ source: parentId, target: currentId });
       }
 
-      const children = Array.from(element.children);
-      if (children.length > 0) {
-        treeNode.children = children.map(child => traverse(child, currentId));
-      } else {
-        // If there are no element children, check for text content
-        const textContent = element.textContent?.trim();
-        if (textContent) {
-          treeNode.children = [{ name: `"${textContent}"`, attributes: {}, children: [] }];
-        }
+      // For hierarchical tree data
+      const treeNode: D3TreeNode = {
+        name: element.tagName,
+        attributes: nodeAttributes,
+        children: childElements.map(child => traverse(child, currentId, level + 1)),
+      };
+
+      // If there are no element children, add text content as a child for the tree view
+      if (textContent && childElements.length === 0) {
+        treeNode.children?.push({ name: `"${textContent}"`, attributes: {}, children: [] });
       }
 
       return treeNode;
     };
 
-    const treeData = traverse(rootElement);
+    const treeData = traverse(rootElement, null, 0);
     const graphData: GraphData = { nodes, links };
 
     return { treeData, graphData };

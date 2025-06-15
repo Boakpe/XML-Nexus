@@ -8,7 +8,10 @@ export interface D3TreeNode {
 // For the Force-Directed Graph (flat)
 export interface D3GraphNode extends d3.SimulationNodeDatum {
   id: string;
-  name: string;
+  label: string; // Combined display text (tag, attributes, content)
+  tagName: string; // Original XML tag name
+  type: 'root' | 'container' | 'element' | 'leaf';
+  level: number;
   attributes: { [key: string]: string };
 }
 
@@ -27,4 +30,3 @@ export interface ParsedData {
   treeData: D3TreeNode;
   graphData: GraphData;
 }
-
