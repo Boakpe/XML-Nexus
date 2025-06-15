@@ -1,0 +1,617 @@
+Directory structure:
+└── src/
+    ├── App.tsx
+    ├── index.css
+    ├── main.tsx
+    ├── vite-env.d.ts
+    ├── components/
+    │   ├── GraphView.tsx
+    │   ├── Tabs.tsx
+    │   ├── TreeView.tsx
+    │   └── XMLInput.tsx
+    └── utils/
+        ├── types.ts
+        └── xmlParser.ts
+
+================================================
+File: App.tsx
+================================================
+import { useState } from 'react';
+import { Github } from 'lucide-react';
+import XMLInput from './components/XMLInput';
+import Tabs from './components/Tabs';
+import type { Tab } from './components/Tabs';
+import GraphView from './components/GraphView';
+import TreeView from './components/TreeView';
+import { parseXML } from './utils/xmlParser';
+import type { ParsedData } from './utils/types';
+
+// A good default example for the user to start with
+const defaultXML = `
+<root name="My Project">
+  <folder name="src">
+    <file name="index.js" size="1.2KB" />
+    <folder name="components">
+      <file name="Button.tsx" />
+      <file name="Modal.tsx" />
+    </folder>
+    <folder name="utils">
+      <file name="api.js" />
+    </folder>
+  </folder>
+  <folder name="public">
+    <file name="index.html" />
+    <file name="favicon.ico" />
+  </folder>
+  <file name="package.json" />
+</root>
+`.trim();
+
+function App() {
+  const [data, setData] = useState<ParsedData | null>(() => parseXML(defaultXML));
+  const [activeTab, setActiveTab] = useState<Tab>('graph');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleVisualize = (xml: string) => {
+    setError(null);
+    const parsed = parseXML(xml);
+    if (parsed) {
+      setData(parsed);
+    } else {
+      setData(null);
+      setError("Failed to parse XML. Please check the format and try again.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-secondary font-sans">
+      <header className="bg-primary text-white shadow-md p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold tracking-tight">XML Graph Visualizer</h1>
+        <a 
+          href="https://github.com/your-username/d3-xml-visualizer" // <-- CHANGE THIS
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center space-x-2 text-slate-300 hover:text-accent transition-colors"
+        >
+          <Github size={20} />
+          <span>View on GitHub</span>
+        </a>
+      </header>
+      
+      <main className="flex-grow flex p-4 gap-4 overflow-hidden">
+        <div className="w-1/3 flex flex-col">
+          <XMLInput onVisualize={handleVisualize} initialValue={defaultXML} />
+        </div>
+        
+        <div className="w-2/3 flex flex-col bg-white rounded-lg shadow-lg p-4">
+          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+          <div className="flex-grow relative border border-slate-200 rounded-md bg-slate-50 overflow-hidden">
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-100 text-red-700 p-4 rounded-md">
+                <p>{error}</p>
+              </div>
+            )}
+            {!error && data && (
+              <>
+                <div style={{ display: activeTab === 'graph' ? 'block' : 'none', height: '100%' }}>
+                  <GraphView data={data.graphData} />
+                </div>
+                <div style={{ display: activeTab === 'tree' ? 'block' : 'none', height: '100%' }}>
+                  <TreeView data={data.treeData} />
+                </div>
+              </>
+            )}
+            {!error && !data && (
+               <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+                <p>Enter XML data and click Visualize to begin.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default App;
+
+
+================================================
+File: index.css
+================================================
+@import "tailwindcss";
+
+
+================================================
+File: main.tsx
+================================================
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+
+
+
+================================================
+File: vite-env.d.ts
+================================================
+/// <reference types="vite/client" />
+
+
+
+================================================
+File: components/GraphView.tsx
+================================================
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+import type { GraphData, D3GraphNode } from '../utils/types';
+
+interface GraphViewProps {
+  data: GraphData;
+}
+
+const GraphView: React.FC<GraphViewProps> = ({ data }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const { nodes, links } = data;
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const width = svgRef.current.parentElement!.clientWidth;
+    const height = svgRef.current.parentElement!.clientHeight;
+
+    const svg = d3.select(svgRef.current)
+      .attr('width', width)
+      .attr('height', height)
+      .attr('viewBox', [-width / 2, -height / 2, width, height].join(' '));
+
+    // Clear previous render
+    svg.selectAll('*').remove();
+    
+    const container = svg.append('g');
+
+    // Tooltip
+    const tooltip = d3.select('body').append('div')
+      .attr('class', 'absolute p-2 text-sm bg-slate-800 text-white rounded-md opacity-0 pointer-events-none transition-opacity')
+      .style('transform', 'translate(10px, 10px)');
+
+    // Simulation
+    const simulation = d3.forceSimulation(nodes as d3.SimulationNodeDatum[])
+      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(70))
+      .force('charge', d3.forceManyBody().strength(-150))
+      .force('center', d3.forceCenter(0, 0));
+
+    // Links
+    const link = container.append('g')
+      .attr('stroke', '#94a3b8') // slate-400
+      .attr('stroke-opacity', 0.6)
+      .selectAll('line')
+      .data(links)
+      .join('line')
+      .attr('stroke-width', 1.5);
+
+    // Nodes
+    const node = container.append('g')
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1.5)
+      .selectAll('circle')
+      .data(nodes)
+      .join('circle')
+      .attr('r', 8)
+      .attr('fill', '#38bdf8') // sky-400
+      .on('mouseover', (event, d) => {
+        tooltip.transition().duration(200).style('opacity', .9);
+        const attrs = Object.entries(d.attributes).map(([k,v]) => `${k}: ${v}`).join('<br/>');
+        tooltip.html(`<strong>${d.name}</strong><br/>${attrs}`)
+          .style('left', (event.pageX) + 'px')
+          .style('top', (event.pageY) + 'px');
+      })
+      .on('mouseout', () => {
+        tooltip.transition().duration(500).style('opacity', 0);
+      });
+
+    // Node Labels
+    const labels = container.append('g')
+      .attr('class', 'labels')
+      .selectAll('text')
+      .data(nodes)
+      .enter().append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', -12)
+      .attr('class', 'text-xs font-sans fill-primary pointer-events-none')
+      .text(d => d.name);
+
+    // Drag behavior
+    const drag = (simulation: d3.Simulation<d3.SimulationNodeDatum, undefined>) => {
+      function dragstarted(event: d3.D3DragEvent<any, any, any>, d: any) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+      function dragged(event: d3.D3DragEvent<any, any, any>, d: any) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+      function dragended(event: d3.D3DragEvent<any, any, any>, d: any) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+      return d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended);
+    }
+    node.call(drag(simulation) as any);
+
+    // Zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 8])
+      .on('zoom', (event) => {
+        container.attr('transform', event.transform);
+      });
+    svg.call(zoom);
+
+    // Tick function
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => (d.source as D3GraphNode).x!)
+        .attr('y1', d => (d.source as D3GraphNode).y!)
+        .attr('x2', d => (d.target as D3GraphNode).x!)
+        .attr('y2', d => (d.target as D3GraphNode).y!);
+
+      node
+        .attr('cx', d => d.x!)
+        .attr('cy', d => d.y!);
+      
+      labels
+        .attr('x', d => d.x!)
+        .attr('y', d => d.y!);
+    });
+
+    return () => {
+      // Cleanup tooltip on component unmount
+      tooltip.remove();
+    };
+  }, [nodes, links]);
+
+  return <svg ref={svgRef} className="w-full h-full cursor-grab"></svg>;
+};
+
+export default GraphView;
+
+
+================================================
+File: components/Tabs.tsx
+================================================
+import React from 'react';
+import clsx from 'clsx';
+import { GitBranch, Share2 } from 'lucide-react';
+
+export type Tab = 'graph' | 'tree';
+
+interface TabsProps {
+  activeTab: Tab;
+  setActiveTab: (tab: Tab) => void;
+}
+
+const tabsConfig: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'graph', label: 'Force Graph', icon: Share2 },
+  { id: 'tree', label: 'Tidy Tree', icon: GitBranch },
+];
+
+const Tabs: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
+  return (
+    <div className="flex space-x-1 rounded-lg bg-slate-200 p-1 mb-4">
+      {tabsConfig.map((tab) => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={clsx(
+              'w-full flex items-center justify-center rounded-md py-2.5 text-sm font-medium leading-5 transition-all duration-300',
+              'focus:outline-none focus:ring-2 ring-offset-2 ring-offset-slate-200 ring-white',
+              {
+                'bg-white text-accent shadow': activeTab === tab.id,
+                'text-primary hover:bg-white/[0.6] hover:text-accent': activeTab !== tab.id,
+              }
+            )}
+          >
+            <Icon className="w-5 h-5 mr-2" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+export default Tabs;
+
+
+================================================
+File: components/TreeView.tsx
+================================================
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+
+// Define the types
+interface D3TreeNode {
+  name: string;
+  children?: D3TreeNode[];
+}
+
+interface TreeViewProps {
+  data: D3TreeNode;
+}
+
+const TreeView: React.FC<TreeViewProps> = ({ data }) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!svgRef.current || !data) return;
+
+    const parentEl = svgRef.current.parentElement!;
+    const width = parentEl.clientWidth || 800;
+    const height = parentEl.clientHeight || 600;
+
+    // Create hierarchy
+    const root = d3.hierarchy(data);
+    
+    // Set up tree layout
+    const dx = 30;
+    const dy = width / (root.height + 1);
+    const tree = d3.tree<D3TreeNode>().nodeSize([dx, dy]);
+    
+    // Apply tree layout
+    tree(root);
+
+    // Calculate bounds
+    let x0 = Infinity;
+    let x1 = -x0;
+    root.each(d => {
+      if (d.x > x1) x1 = d.x;
+      if (d.x < x0) x0 = d.x;
+    });
+
+    // Set up SVG
+    const svg = d3.select(svgRef.current)
+      .attr('width', width)
+      .attr('height', height)
+      .attr('viewBox', [0, x0 - dx, width, x1 - x0 + dx * 2].join(' '));
+
+    // Clear previous render
+    svg.selectAll('*').remove();
+
+    // Main group
+    const g = svg.append('g')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 12)
+      .attr('transform', `translate(${dy / 3}, ${dx - x0})`);
+
+    // Add zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 5])
+      .on('zoom', (event) => {
+        g.attr('transform', `translate(${dy / 3}, ${dx - x0}) ${event.transform}`);
+      });
+
+    svg.call(zoom);
+
+    // Add links
+    g.append('g')
+      .attr('fill', 'none')
+      .attr('stroke', '#94a3b8')
+      .attr('stroke-opacity', 0.8)
+      .attr('stroke-width', 1.5)
+      .selectAll('path')
+      .data(root.links())
+      .join('path')
+      .attr('d', d3.linkHorizontal<d3.HierarchyPointLink<D3TreeNode>, d3.HierarchyPointNode<D3TreeNode>>()
+        .x(d => d.y)
+        .y(d => d.x));
+
+    // Add nodes
+    const node = g.append('g')
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-width', 2)
+      .selectAll('g')
+      .data(root.descendants())
+      .join('g')
+      .attr('transform', d => `translate(${d.y},${d.x})`);
+
+    // Add circles
+    node.append('circle')
+      .attr('fill', d => d.children ? '#0f172a' : '#38bdf8')
+      .attr('stroke', '#fff')
+      .attr('r', 5);
+
+    // Add labels with better styling
+    node.append('text')
+      .attr('dy', '0.35em')
+      .attr('x', d => d.children ? -10 : 10)
+      .attr('text-anchor', d => d.children ? 'end' : 'start')
+      .attr('fill', '#1f2937')
+      .attr('font-weight', 'bold')
+      .attr('font-size', '11px')
+      .text(d => d.data.name)
+      .clone(true)
+      .lower()
+      .attr('stroke', 'white')
+      .attr('stroke-width', 3);
+
+  }, [data]);
+
+  return <svg ref={svgRef} className="w-full h-full cursor-grab" />;
+};
+
+export default TreeView;
+
+
+================================================
+File: components/XMLInput.tsx
+================================================
+import React, { useState } from "react";
+import { HardDriveUpload } from "lucide-react";
+
+interface XMLInputProps {
+  onVisualize: (xml: string) => void;
+  initialValue: string;
+}
+
+const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
+  const [xml, setXml] = useState(initialValue);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onVisualize(xml);
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col h-full bg-white rounded-lg shadow-lg p-6"
+    >
+      <h2 className="text-2xl font-bold text-primary mb-4">XML Data</h2>
+
+      <textarea
+        value={xml}
+        onChange={(e) => setXml(e.target.value)}
+        className="flex-grow w-full p-3 border border-slate-300 rounded-md resize-none focus:ring-2 focus:ring-accent focus:outline-none font-mono text-sm bg-slate-50"
+        placeholder="Paste your XML here..."
+      />
+      <button
+        type="submit"
+        className="mt-4 w-full flex items-center justify-center bg-accent text-white font-bold py-3 px-4 rounded-md hover:bg-sky-500 bg-sky-800 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+      >
+        <HardDriveUpload className="mr-2 h-5 w-5" />
+        Visualize
+      </button>
+    </form>
+  );
+};
+
+export default XMLInput;
+
+
+
+================================================
+File: utils/types.ts
+================================================
+// For the Tree Layout (hierarchical)
+export interface D3TreeNode {
+  name: string;
+  attributes: { [key: string]: string };
+  children?: D3TreeNode[];
+}
+
+// For the Force-Directed Graph (flat)
+export interface D3GraphNode extends d3.SimulationNodeDatum {
+  id: string;
+  name: string;
+  attributes: { [key: string]: string };
+}
+
+export interface D3GraphLink extends d3.SimulationLinkDatum<D3GraphNode> {
+  source: string;
+  target: string;
+}
+
+export interface GraphData {
+  nodes: D3GraphNode[];
+  links: D3GraphLink[];
+}
+
+// Combined result from the parser
+export interface ParsedData {
+  treeData: D3TreeNode;
+  graphData: GraphData;
+}
+
+
+================================================
+File: utils/xmlParser.ts
+================================================
+import type { D3TreeNode, GraphData, D3GraphNode, D3GraphLink, ParsedData } from './types';
+
+// Helper to extract attributes from an XML element
+const getAttributes = (element: Element): { [key: string]: string } => {
+  const attrs: { [key: string]: string } = {};
+  for (let i = 0; i < element.attributes.length; i++) {
+    const attr = element.attributes[i];
+    attrs[attr.name] = attr.value;
+  }
+  return attrs;
+};
+
+export const parseXML = (xmlString: string): ParsedData | null => {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+
+    // Check for parsing errors
+    if (xmlDoc.getElementsByTagName("parsererror").length) {
+      console.error("Error parsing XML");
+      throw new Error("Invalid XML format");
+    }
+
+    const rootElement = xmlDoc.documentElement;
+    if (!rootElement) return null;
+
+    let nodeIdCounter = 0;
+    const nodes: D3GraphNode[] = [];
+    const links: D3GraphLink[] = [];
+
+    const traverse = (element: Element, parentId?: string): D3TreeNode => {
+      const currentId = `node-${nodeIdCounter++}`;
+      
+      const nodeAttributes = getAttributes(element);
+
+      // For hierarchical tree data
+      const treeNode: D3TreeNode = {
+        name: element.tagName,
+        attributes: nodeAttributes,
+        children: [],
+      };
+
+      // For flat graph data
+      const graphNode: D3GraphNode = {
+        id: currentId,
+        name: element.tagName,
+        attributes: nodeAttributes,
+      };
+      nodes.push(graphNode);
+
+      if (parentId) {
+        links.push({ source: parentId, target: currentId });
+      }
+
+      const children = Array.from(element.children);
+      if (children.length > 0) {
+        treeNode.children = children.map(child => traverse(child, currentId));
+      } else {
+        // If there are no element children, check for text content
+        const textContent = element.textContent?.trim();
+        if (textContent) {
+          treeNode.children = [{ name: `"${textContent}"`, attributes: {}, children: [] }];
+        }
+      }
+
+      return treeNode;
+    };
+
+    const treeData = traverse(rootElement);
+    const graphData: GraphData = { nodes, links };
+
+    return { treeData, graphData };
+
+  } catch (error) {
+    console.error("XML parsing failed:", error);
+    return null;
+  }
+};
+
