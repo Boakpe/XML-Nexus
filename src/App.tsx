@@ -50,7 +50,7 @@ function App() {
       <header className="bg-primary text-white shadow-md p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold tracking-tight">XML Graph Visualizer</h1>
         <a 
-          href="https://github.com/your-username/d3-xml-visualizer" // <-- CHANGE THIS
+          href="https://github.com/your-username/d3-xml-visualizer"
           target="_blank" 
           rel="noopener noreferrer" 
           className="flex items-center space-x-2 text-slate-300 hover:text-accent transition-colors"
