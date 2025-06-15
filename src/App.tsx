@@ -75,12 +75,10 @@ function App() {
             )}
             {!error && data && (
               <>
-                <div style={{ display: activeTab === 'graph' ? 'block' : 'none', height: '100%' }}>
-                  <GraphView data={data.graphData} />
-                </div>
-                <div style={{ display: activeTab === 'tree' ? 'block' : 'none', height: '100%' }}>
-                  <TreeView data={data.treeData} />
-                </div>
+                {/* Conditionally render the active tab's component.
+                    This ensures the inactive component is unmounted, freeing up resources. */}
+                {activeTab === 'graph' && <GraphView data={data.graphData} />}
+                {activeTab === 'tree' && <TreeView data={data.treeData} />}
               </>
             )}
             {!error && !data && (
