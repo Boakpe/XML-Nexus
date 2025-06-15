@@ -1,5 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { HardDriveUpload } from "lucide-react";
+
+// CodeMirror imports
+import { EditorView, basicSetup } from "codemirror";
+import { xml as xmlLang } from "@codemirror/lang-xml";
 
 interface XMLInputProps {
   onVisualize: (xml: string) => void;
@@ -7,7 +11,71 @@ interface XMLInputProps {
 }
 
 const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
+  // This state will hold the editor's content. It's kept in sync by the editor's listener.
   const [xml, setXml] = useState(initialValue);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const editorViewRef = useRef<EditorView | null>(null);
+
+  // --- EFFECT 1: Create the editor instance (runs only once) ---
+  useEffect(() => {
+    if (editorRef.current && !editorViewRef.current) {
+      const view = new EditorView({
+        doc: initialValue, // Use initialValue for the very first creation
+        extensions: [
+          basicSetup,
+          xmlLang(),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              // When the user types, update the React state
+              const newValue = update.state.doc.toString();
+              setXml(newValue);
+            }
+          }),
+          EditorView.theme({
+            "&": {
+              height: "100%",
+            },
+            ".cm-scroller": {
+              fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
+              fontSize: "14px",
+            },
+            ".cm-focused": {
+              outline: "2px solid rgb(14 165 233)",
+              outlineOffset: "2px",
+            },
+          }),
+        ],
+        parent: editorRef.current,
+      });
+
+      editorViewRef.current = view;
+    }
+
+    // Cleanup function to destroy the editor when the component unmounts
+    return () => {
+      if (editorViewRef.current) {
+        editorViewRef.current.destroy();
+        editorViewRef.current = null;
+      }
+    };
+    // The empty dependency array [] ensures this effect runs ONLY ONCE on mount.
+  }, []); 
+
+  // --- EFFECT 2: Sync external changes (from props) to the editor ---
+  useEffect(() => {
+    // Check if the editor instance exists and if the prop value is different from the editor's current content
+    if (editorViewRef.current && initialValue !== editorViewRef.current.state.doc.toString()) {
+      // If they are different, dispatch a transaction to update the editor's content
+      editorViewRef.current.dispatch({
+        changes: {
+          from: 0,
+          to: editorViewRef.current.state.doc.length,
+          insert: initialValue,
+        },
+      });
+    }
+    // This effect runs whenever the `initialValue` prop changes.
+  }, [initialValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,12 +88,10 @@ const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
       className="flex flex-col h-full bg-white rounded-lg shadow-lg p-6"
     >
       <h2 className="text-2xl font-bold text-primary mb-4">XML Data</h2>
-
-      <textarea
-        value={xml}
-        onChange={(e) => setXml(e.target.value)}
-        className="flex-grow w-full p-3 border border-slate-300 rounded-md resize-none focus:ring-2 focus:ring-accent focus:outline-none font-mono text-sm bg-slate-50"
-        placeholder="Paste your XML here..."
+      <div
+        ref={editorRef}
+        className="flex-grow w-full border border-slate-300 rounded-md overflow-hidden bg-slate-50"
+        style={{ minHeight: "300px" }}
       />
       <button
         type="submit"
