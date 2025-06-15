@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import { useState, useMemo } from 'react';
-import { Github, CodeXml, AlertTriangle, Sparkles } from 'lucide-react';
+import { CodeXml, AlertTriangle } from 'lucide-react';
 import XMLInput from './components/XMLInput';
 import Tabs from './components/Tabs';
 import type { Tab } from './components/Tabs';
@@ -65,7 +65,7 @@ function App() {
       totalNodes: nodes.length,
       totalEdges: links.length,
       maxDepth: Math.max(0, ...nodes.map(node => node.level)),
-      leafNodes: nodes.filter(node => !node.children || node.children.length === 0).length,
+      leafNodes: nodes.filter(node => !links.some(link => link.source === node.id)).length,
     };
   }, [data]);
 
