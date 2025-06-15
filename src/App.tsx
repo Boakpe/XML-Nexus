@@ -1,5 +1,7 @@
+// src/App.tsx
+
 import { useState, useMemo } from 'react';
-import { Github } from 'lucide-react';
+import { Github, CodeXml, AlertTriangle, Sparkles } from 'lucide-react';
 import XMLInput from './components/XMLInput';
 import Tabs from './components/Tabs';
 import type { Tab } from './components/Tabs';
@@ -7,8 +9,6 @@ import GraphView from './components/GraphView';
 import TreeView from './components/TreeView';
 import { parseXML } from './utils/xmlParser';
 import type { ParsedData } from './utils/types';
-
-
 
 // A good default example for the user to start with
 const defaultXML = `
@@ -31,87 +31,113 @@ const defaultXML = `
 </root>
 `.trim();
 
+
 function App() {
-  const [data, setData] = useState<ParsedData | null>(() => parseXML(defaultXML));
+  const [xmlString, setXmlString] = useState<string>(defaultXML);
   const [activeTab, setActiveTab] = useState<Tab>('graph');
   const [error, setError] = useState<string | null>(null);
 
-  const handleVisualize = (xml: string) => {
-    setError(null);
-    const parsed = parseXML(xml);
-    if (parsed) {
-      setData(parsed);
-    } else {
-      setData(null);
-      setError("Failed to parse XML. Please check the format and try again.");
+  // Memoize parsing to avoid re-calculating on every render
+  const data = useMemo<ParsedData | null>(() => {
+    try {
+      const parsed = parseXML(xmlString);
+      if (parsed) {
+        setError(null);
+        return parsed;
+      }
+      setError("Failed to parse XML. Please check the format.");
+      return null;
+    } catch (e) {
+      setError("An unexpected error occurred during XML parsing.");
+      return null;
     }
-  };
+  }, [xmlString]);
 
-    // Calculate stats from the parsed data
+  // The onVisualize function now just updates the string, triggering the memoized parser
+  const handleVisualize = (xml: string) => {
+    setXmlString(xml);
+  };
+  
   const stats = useMemo(() => {
     if (!data) return null;
-
     const { nodes, links } = data.graphData;
-    const totalNodes = nodes.length;
-    const totalEdges = links.length;
-    const leafNodes = nodes.filter(node => node.type === 'leaf').length;
-    const maxDepth = Math.max(0, ...nodes.map(node => node.level));
-
-    return { totalNodes, totalEdges, maxDepth, leafNodes };
+    return {
+      totalNodes: nodes.length,
+      totalEdges: links.length,
+      maxDepth: Math.max(0, ...nodes.map(node => node.level)),
+      leafNodes: nodes.filter(node => !node.children || node.children.length === 0).length,
+    };
   }, [data]);
 
   return (
-    <div className="flex flex-col h-screen bg-secondary font-sans">
-      
+    <div className="flex flex-col h-screen bg-slate-50 font-sans text-slate-800">
+      {/* <header className="flex items-center justify-between p-4 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-6 w-6 text-blue-500" />
+          <h1 className="text-xl font-semibold text-slate-800">XML Visualizer</h1>
+        </div>
+        <a
+          href="https://github.com/your-username/d3-xml-visualizer"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-slate-500 hover:text-blue-500 transition-colors"
+          aria-label="View on GitHub"
+        >
+          <Github size={24} />
+        </a>
+      </header> */}
+
       <main className="flex-grow flex p-4 gap-4 overflow-hidden">
-        <div className="w-1/3 flex flex-col gap-4 min-w-[300px] overflow-hidden">
-           <div className="flex-grow overflow-auto">
+        {/* Left Column */}
+        <div className="w-1/3 flex flex-col gap-4 min-w-[350px]">
+          <div className="flex-grow flex flex-col min-h-0">
              <XMLInput onVisualize={handleVisualize} initialValue={defaultXML} />
-           </div>
+          </div>
           
           {stats && (
-            <div className="bg-white rounded-lg shadow-lg p-6 overflow-auto">
-              <h2 className="text-2xl font-bold text-primary mb-4">Statistics</h2>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-slate-100 p-3 rounded-md">
-                  <p className="text-slate-500 font-semibold">Total Nodes</p>
-                  <p className="text-2xl font-bold text-primary">{stats.totalNodes}</p>
+            <div className="bg-white rounded2-xl shadow2-sm border border-slate-200 p-4">
+              <h2 className="text-lg font-semibold text-slate-800 mb-4">Statistics</h2>
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="rounded2-lg p-3">
+                  <p className="text-sm text-slate-500">Total Nodes</p>
+                  <p className="text-2xl font-semibold text-blue-600">{stats.totalNodes}</p>
                 </div>
-                <div className="bg-slate-100 p-3 rounded-md">
-                  <p className="text-slate-500 font-semibold">Total Edges</p>
-                  <p className="text-2xl font-bold text-primary">{stats.totalEdges}</p>
+                <div className="rounded2-lg p-3">
+                  <p className="text-sm text-slate-500">Total Edges</p>
+                  <p className="text-2xl font-semibold text-blue-600">{stats.totalEdges}</p>
                 </div>
-                <div className="bg-slate-100 p-3 rounded-md">
-                  <p className="text-slate-500 font-semibold">Max Depth</p>
-                  <p className="text-2xl font-bold text-primary">{stats.maxDepth}</p>
+                <div className="rounded2-lg p-3">
+                  <p className="text-sm text-slate-500">Max Depth</p>
+                  <p className="text-2xl font-semibold text-blue-600">{stats.maxDepth}</p>
                 </div>
-                <div className="bg-slate-100 p-3 rounded-md">
-                  <p className="text-slate-500 font-semibold">Leaf Nodes</p>
-                  <p className="text-2xl font-bold text-primary">{stats.leafNodes}</p>
+                <div className="rounded2-lg p-3">
+                  <p className="text-sm text-slate-500">Leaf Nodes</p>
+                  <p className="text-2xl font-semibold text-blue-600">{stats.leafNodes}</p>
                 </div>
               </div>
             </div>
           )}
-         </div>
+        </div>
         
-        <div className="w-2/3 flex flex-col bg-white rounded-lg shadow-lg p-4">
+        {/* Right Column */}
+        <div className="w-2/3 flex flex-col bg-white rounded2-xl shadow2-sm border border-slate-200 p-4">
           <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          <div className="flex-grow relative border border-slate-200 rounded-md bg-slate-50 overflow-hidden">
+          <div className="flex-grow relative bg-slate-100/70 rounded2-lg overflow-hidden">
             {error && (
-              <div className="absolute inset-0 flex items-center justify-center bg-red-100 text-red-700 p-4 rounded-md">
-                <p>{error}</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-red-600 p-4">
+                <AlertTriangle className="h-8 w-8" />
+                <p className="font-medium">{error}</p>
               </div>
             )}
             {!error && data && (
               <>
-                {/* Conditionally render the active tab's component.
-                    This ensures the inactive component is unmounted, freeing up resources. */}
                 {activeTab === 'graph' && <GraphView data={data.graphData} />}
                 {activeTab === 'tree' && <TreeView data={data.treeData} />}
               </>
             )}
             {!error && !data && (
-               <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-500">
+                <CodeXml className="h-8 w-8" />
                 <p>Enter XML data and click Visualize to begin.</p>
               </div>
             )}

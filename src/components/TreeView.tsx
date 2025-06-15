@@ -62,7 +62,7 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
 
     // Tooltip setup
     const tooltip = d3.select('body').append('div')
-      .attr('class', 'absolute p-2 text-sm bg-slate-800 text-white rounded-md opacity-0 pointer-events-none transition-opacity')
+      .attr('class', 'absolute p-2 text-sm bg-slate-800 text-white rounded2-md opacity-0 pointer-events-none transition-opacity')
       .style('transform', 'translate(15px, -15px)');
 
     function update(source: d3.HierarchyNode<D3TreeNode>) {
