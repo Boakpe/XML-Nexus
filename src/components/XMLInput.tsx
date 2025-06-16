@@ -115,7 +115,7 @@ const XMLInput: React.FC<XMLInputProps> = ({ onVisualize, initialValue }) => {
       <div className="p-4 border-b border-slate-200 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-slate-800">XML Data Input</h2>
          <a
-          href="https://github.com/your-username/d3-xml-visualizer"
+          href="https://boakpe.github.io/XML-Nexus/"
           target="_blank"
           rel="noopener noreferrer"
           className="text-slate-500 hover:text-blue-500 transition-colors"

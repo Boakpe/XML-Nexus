@@ -1,54 +1,68 @@
-# React + TypeScript + Vite
+# XML Nexus
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+✨ An interactive tool to transform complex XML data into beautiful, insightful visualizations.
 
-Currently, two official plugins are available:
+**XML Nexus** brings your data structures to life by parsing XML and rendering it as a dynamic force-directed graph and a collapsible tidy tree. Built with React, D3.js, and TypeScript, it's designed to be a fast, client-side tool for developers, data analysts, and anyone working with XML.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**[➡️ View Live Demo](https://boakpe.github.io/XML-Nexus/)**
 
-## Expanding the ESLint configuration
+ 
+<img src="https://i.imgur.com/M3Pb76H.png" alt="XML Nexus Screenshot" style="border-radius: 12px;" />
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## 🚀 Features
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+*   **Dual Visualization Modes:** Switch seamlessly between:
+    *   **Force-Directed Graph:** An interactive physics-based simulation that reveals the relationships and clusters within your data.
+    *   **Collapsible Tidy Tree:** A classic hierarchical view, perfect for understanding parent-child relationships and data depth.
+*   **Interactive Controls:** Zoom, pan, and drag nodes to explore the visualization from every angle.
+*   **Real-time Parsing:** Instantly visualize changes to your XML structure.
+*   **Modern XML Editor:** A built-in CodeMirror editor with syntax highlighting, line numbers, and a clean interface.
+*   **Insightful Statistics:** Get a quick overview of your data with stats on total nodes, edges, max depth, and leaf nodes.
+*   **Client-Side Processing:** Everything runs in your browser. No data is ever sent to a server, ensuring privacy and speed.
+*   **Built with Modern Tech:** Leverages the power of React, D3.js, TypeScript, and Tailwind CSS for a responsive and performant experience.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+## 🛠️ Technology Stack
+
+*   **Frontend:** [React](https://reactjs.org/) & [TypeScript](https://www.typescriptlang.org/)
+*   **Visualization:** [D3.js](https://d3js.org/)
+*   **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+*   **XML Editor:** [CodeMirror 6](https://codemirror.net/)
+*   **Animations:** [Framer Motion](https://www.framer.com/motion/)
+*   **Icons:** [Lucide React](https://lucide.dev/)
+*   **Build Tool:** [Vite](https://vitejs.dev/)
+
+---
+
+## 🔧 Getting Started
+
+To run this project locally, follow these steps:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Boakpe/XML-Nexus.git
+    cd xml-nexus
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or yarn install
+    # or pnpm install
+    ```
+
+3.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:5173`.
+
+4.  **Build for production:**
+    To create a production-ready build for deployment (e.g., to GitHub Pages):
+    ```bash
+    npm run build
+    ```
+    This will generate static assets in the `dist/` directory.
